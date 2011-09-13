@@ -1,0 +1,43 @@
+import pdArm
+import time
+
+def main():
+    # this is called when program starts
+    print 'CLAM - Correl Lab Arm Manipulator\n'
+    print 'Diagnostic Tool\n'
+
+    #check if connection to robot estashlished
+    print 'Trying to establish connection with arm via USB serial:'
+    arm = pdArm.PdArm()
+    print 'Connection established! \n'
+
+    print 'Startup position of joints:'
+    positions = arm.read_position()
+    jointCount = 0
+    for i in range(len(positions)):
+        print 'Joint: ',i,' position: ',positions[i]
+
+    time.sleep(2)
+
+    print '\nSending robot to zeros position\n'
+    arm.zero()
+    time.sleep(2)
+
+    print 'Testing joints individually\n\n'
+    for i in range(len( arm.joints )):
+        joint = arm.joints[i]
+        print 'Joint ', i,':'
+        print 'Dev Name: ',joint.get_dev_name()
+        print 'Servo ID: ',joint.get_servo_id()
+        print 'Offset: ',joint.get_offset()
+        print 'Min Angle: ',joint.get_min_angle()
+        print 'Max Angle: ',joint.get_max_angle()
+        print 'Max RPM: ',joint.get_max_rpm()
+        print 'Flipped: ',joint.get_flipped()
+        
+
+
+
+    
+if __name__ == "__main__":
+    main()
