@@ -10,8 +10,8 @@ def makeJoint(dev_name, id, offset, min_angle, max_angle, max_rpm,type=None):
         return joint
     except RuntimeError as e:
         pass
-        print 'warning: unable to initialize servo'
-        traceback.print_exc(e)
+        print 'Warning: unable to initialize servo',id,'on',dev_name
+        # traceback.print_exc(e)
     return None
 
 class PdArm(object):

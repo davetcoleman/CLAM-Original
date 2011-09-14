@@ -167,8 +167,6 @@ class single_joint:
         ''' 
         deg = angle*self.flipped +self.offset
         
-        
-        
         if deg>self.max_angle or deg<self.min_angle:
             print 'goal_angle: angle out of range- ', angle
             return
