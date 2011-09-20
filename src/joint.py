@@ -175,7 +175,7 @@ class single_joint:
             if not self.speed(rpm):
                 return
 
-#        print self.id, angle,deg
+        #print '-- Joint',self.id, 'Debug: Angle:',angle,'Degree:',deg,'RPM:',rpm
         
         self.servo_write("goal", deg)
 
@@ -183,6 +183,8 @@ class single_joint:
 #        time.sleep(0.05)
 #        #while(self.servo_read("is moving")):
 #        #    continue
+        
+
         
         if blocking == hardBlocking:
             while self.is_moving():

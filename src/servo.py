@@ -763,7 +763,7 @@ class servo(object):
             
         self.__servo_dev.flushInput()
         self.__servo_dev.write(str)
-
+        
     def __read_serial(self, nBytes=0):
         '''reads a number of bytes from the servo
             nBytes - number of bytes to read
@@ -808,7 +808,9 @@ class servo(object):
         data=list(ord(x) for x in s[3:-1])
         if len(data) < nBytes-6:
             raise RuntimeError("__read_serial: not enough data found in response packet "+str(l)+"\n")
-        
+  
+        print '___','READ J',self.__servo_id,':',data,'ERROR:',err
+
         return data,err
 
     def __open_serial(self):
@@ -835,4 +837,5 @@ class servo(object):
 
 class servo_ex106(servo):
     def __init__(self, dev_name, servo_id, baudrate=1000000, max_angle=254.2, angle_steps=4096,speed_factor=1.28):
-        servo.__init__(self, dev_name=dev_name, servo_id=servo_id, baudrate=baudrate, max_angle=max_angle, angle_steps=angle_steps, speed_factor=speed_factor)
+        servo.__init__(self, dev_name=dev_name, servo_id=servo_id, baudrate=baudrate, max_angle=max_angle, 
+                       angle_steps=angle_steps, speed_factor=speed_factor)

@@ -3,33 +3,68 @@ import servo
 import time
 import sys
 import traceback
+import subprocess
 
-def makeJoint(dev_name, id, offset, min_angle, max_angle, max_rpm,type=None):
-    try:
-        joint = j.single_joint(dev_name, id, offset=offset, min_angle=min_angle, max_angle=max_angle, max_rpm=max_rpm, type=type)
-        return joint
-    except RuntimeError as e:
-        pass
-        print 'Warning: unable to initialize servo',id,'on',dev_name
-        # traceback.print_exc(e)
-    return None
-
-class PdArm(object):
-    def __init__(self, dev_name='/dev/ttyUSB0'):
+class Arm(object):
+    def __init__(self):
         ''' dev_name - name of serial device of the servo controller (default '/dev/ttyUSB0')
         '''
-        self.joints = [makeJoint(dev_name, 0, offset=150, min_angle=0, max_angle=300, max_rpm=30),
-        makeJoint(dev_name, 1, offset=127.1, min_angle=61, max_angle=233.6, max_rpm=30, type='EX-106'),
-        makeJoint(dev_name, 2, offset=150, min_angle=0, max_angle=300, max_rpm=30),
-        makeJoint(dev_name, 3, offset=150, min_angle=54.25, max_angle=262, max_rpm=30),
-        makeJoint(dev_name, 4, offset=150, min_angle=0, max_angle=300, max_rpm=30),
-        makeJoint(dev_name, 5, offset=150, min_angle=35.2, max_angle=262, max_rpm=30),
-        makeJoint(dev_name, 6, offset=150, min_angle=0, max_angle=300, max_rpm=30),
-        makeJoint(dev_name, 7, offset=60, min_angle=45, max_angle=120, max_rpm=30)]
+        
+        self.findUSB()
+ 
+        # save original position so that we can go back to sleep later on
+        # this is assuming that the arm woke up at a 'docked' position, or off position
+        self.original_position = self.read_position()
+
+
+    def findUSB(self):
+
+        # loop through possible ttyUSBX numbers for X
+        for usbNum in range(0,2):
+
+            dev_name = '/dev/ttyUSB'+str(usbNum)
+
+            # establish connection via usb
+            print 'Attempting to establish connection with arm via '+dev_name+' serial:'
+
+            try:
+                self.makeJoints(dev_name)
+                print 'Connection established to ',dev_name,'! \n'
+                return True
+
+            except RuntimeError:
+                print '\nUnable to connect to arm'
+
+            except Exception as e:
+                print 'Unable to connect to arm'
+                traceback.print_exc(e)
+                sys.exit()
+                
+        # last resort, output debug info:
+        print '\nAvailable USB Devices on your system:'
+        command = 'cd /dev && find . -name ttyUSB* -print'
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+        for line in process.stdout:
+            print line
+        process.wait()
+
+        print '\n\nExiting.'
+        sys.exit()
+
+    def makeJoints(self, dev_name):
+
+        self.joints = [self.makeJoint(dev_name, 0, offset=150, min_angle=0, max_angle=300, max_rpm=30),
+        self.makeJoint(dev_name, 1, offset=127.1, min_angle=61, max_angle=233.6, max_rpm=30, type='EX-106'),
+        self.makeJoint(dev_name, 2, offset=150, min_angle=0, max_angle=300, max_rpm=30),
+        self.makeJoint(dev_name, 3, offset=150, min_angle=54.25, max_angle=262, max_rpm=30),
+        self.makeJoint(dev_name, 4, offset=150, min_angle=0, max_angle=300, max_rpm=30),
+        self.makeJoint(dev_name, 5, offset=150, min_angle=35.2, max_angle=262, max_rpm=30),
+        self.makeJoint(dev_name, 6, offset=150, min_angle=0, max_angle=300, max_rpm=30),
+        self.makeJoint(dev_name, 7, offset=60, min_angle=45, max_angle=120, max_rpm=30)]
         
         self.all = servo.servo(dev_name,254)
         if set(self.joints) == set([None]):
-            raise RuntimeError('PdArm: no servos found')
+            raise RuntimeError('Arm: no servos found')
         
         self.claw = len(self.joints)-1
         self.ts=.03
@@ -38,6 +73,20 @@ class PdArm(object):
 #        time.sleep(.1)
         self.set_rpm_all(6)
         self.set_torque_all(False)
+
+
+    def makeJoint(self, dev_name, id, offset, min_angle, max_angle, max_rpm,type=None):
+        try:
+            joint = j.single_joint(dev_name, id, offset=offset, min_angle=min_angle,\
+                                       max_angle=max_angle, max_rpm=max_rpm, type=type)
+
+            return joint
+        except RuntimeError as e:
+            pass
+            print 'Warning: unable to initialize servo',id,'on',dev_name
+            # traceback.print_exc(e)
+        return None
+
     
     def zero(self, rpm=None):
         ''' moves all joints to their zero angle
@@ -47,6 +96,7 @@ class PdArm(object):
     def write_goal(self, joint, angle, rpm=None, blocking=None):
         ''' move joint to angle
         '''
+
         if joint > len(self.joints) or joint < 0:
             print "ERROR: Invalid joint number. move_joint_angle command ignored.   joint:", joint
         else:
@@ -219,9 +269,46 @@ class PdArm(object):
             
             self.write_goal(self.claw,self.read_pos(self.claw))
 
+    # Simply outputs to screen all info about the arm's joints
+    def print_joint_stats(self):
 
-[87.01171875, -48.717529296875, 1.46484375, 82.32421875, -118.359375, 65.33203125, 43.65234375, None]
-[1.5186409782714845, -0.85028128869567876, 0.02556634643554688, 1.4368286696777344, -2.0657607919921874, 1.1504855895996096, 0.76187712377929695, None]
+        print 'Outputting Joint Stats:\n\n'
+        for i in range(len( self.joints )):
+            joint = self.joints[i]
+            print 'Joint Index', i,': -------------------------------'
+            print 'Servo ID: ',joint.get_servo_id()
+            print 'Offset: ',joint.get_offset()
+            print 'Min Angle: ',joint.get_min_angle()
+            print 'Max Angle: ',joint.get_max_angle()
+            print 'Max RPM: ',joint.get_max_rpm()
+            print 'Flipped: ',joint.get_flipped()
+            print 'Current Position: ',joint.read_position()
+            print 'Is Moving: ',joint.is_moving()
+            #joint.servo_print_read_all()
+            print '\n'
 
-[-38.0859375, 52.441162109375, 75.0, 86.42578125, 64.16015625, -69.43359375, -96.38671875, None]
-[-0.6647250073242188, 0.91527094133483899, 1.3089969375000001, 1.5084144396972656, 1.1198059738769532, -1.211844821044922, -1.6822655954589842, None]
+    # Run this function at the very end. Sends the arm to its original position and turns off torque
+    def shutdown(self):
+
+        # send arm back to wake up position
+        self.position(self.original_position)
+
+        print '/n'
+        print '---------------------------------------------------------'
+        print '---------------------------------------------------------'
+        print 'ENSURE ROBOT IS IN HOME POSITION OR SECURED'
+        print 'Shutdown in 6 seconds...'
+        print '---------------------------------------------------------'
+        print '---------------------------------------------------------'
+        
+        for second in range(1,7):
+            time.sleep(1)
+            print second
+
+        # shutdown arm
+        self.set_torque_all(False)
+        self.set_torque_all(False)
+
+        print 'Arm shutdown.\n'
+
+
